@@ -1,11 +1,15 @@
 import streamlit as st
 import pandas as pd
 import datetime
-import matplotlib.pyplot as plt
-import fitz  # PyMuPDF
 import os
 
-st.title("🏃 Tijdregistratie voetbaltraining - Versie 9")
+try:
+    import fitz  # PyMuPDF
+    pymupdf_available = True
+except ImportError:
+    pymupdf_available = False
+
+st.title("🏃 Tijdregistratie voetbaltraining - Versie 9.1")
 
 # Invoer deelnemers
 namen_input = st.text_area("Voer namen in (één per regel):", """Kind 1
@@ -75,16 +79,13 @@ if st.button("🏁 Training afsluiten en resultaten tonen"):
         except:
             return None
 
-    # Parse alle tijdstippen
     tijd_kolommen = [kol for kol in kolommen if kol != 'Naam']
     for kol in tijd_kolommen:
         df[kol + '_dt'] = df[kol].apply(parse_time)
 
-    # Bereken looptijd
     df['Looptijd_td'] = df.apply(lambda row: row['Eindtijd_dt'] - row['Starttijd_dt'] if row['Starttijd_dt'] and row['Eindtijd_dt'] else None, axis=1)
     df['Looptijd'] = df['Looptijd_td'].apply(lambda x: str(x).replace("0 days ", "") if pd.notna(x) else "")
 
-    # Bereken rondetijden
     def bereken_rondes(row):
         tijden = [row['Starttijd_dt']]
         for i in range(1, aantal_ronden):
@@ -101,19 +102,17 @@ if st.button("🏁 Training afsluiten en resultaten tonen"):
 
     df['Rondetijden'] = df.apply(bereken_rondes, axis=1)
 
-    # Voeg tussentijden als tekst toe
     df['Tussentijden'] = df[[kol for kol in kolommen if kol.startswith('Tussentijd')]].apply(
         lambda r: ", ".join([t for t in r if pd.notna(t)]), axis=1
     )
 
-    # Maak resultaat dataframe met juiste kolomvolgorde
     resultaat_df = df[['Naam', 'Looptijd', 'Rondetijden', 'Starttijd', 'Eindtijd', 'Tussentijden', 'Looptijd_td']].copy()
     resultaat_df = resultaat_df.sort_values(by='Looptijd_td').reset_index(drop=True)
     resultaat_df.drop(columns=['Looptijd_td'], inplace=True)
 
     st.session_state.resultaat_df = resultaat_df
 
-    # 📈 Genereer grafiek
+    # 📈 Lijngrafiek via Streamlit
     def tijd_naar_seconden(t):
         try:
             h, m, s = map(int, t.split(":"))
@@ -122,32 +121,25 @@ if st.button("🏁 Training afsluiten en resultaten tonen"):
             return 0
 
     resultaat_df['Looptijd_sec'] = resultaat_df['Looptijd'].apply(tijd_naar_seconden)
+    st.subheader("📈 Looptijden per deelnemer")
+    st.line_chart(resultaat_df.set_index('Naam')['Looptijd_sec'])
 
-    plt.figure(figsize=(8, 5))
-    plt.plot(resultaat_df['Naam'], resultaat_df['Looptijd_sec'], marker='o', linestyle='-', color='blue')
-    plt.ylabel('Looptijd (seconden)')
-    plt.title('Looptijden per deelnemer')
-    plt.grid(True)
-    plt.tight_layout()
-    grafiek_pad = "looptijden_lijn_grafiek.png"
-    plt.savefig(grafiek_pad)
-    plt.close()
+    # 📄 PDF-export (alleen als PyMuPDF beschikbaar is)
+    if pymupdf_available:
+        pdf = fitz.open()
+        pagina = pdf.new_page()
+        tekst = "Resultaten voetbaltraining\n\n"
+        for i, row in resultaat_df.iterrows():
+            tekst += f"{row['Naam']}: Looptijd {row['Looptijd']}, Rondetijden {row['Rondetijden']}\n"
+        pagina.insert_text((50, 50), tekst, fontsize=11)
+        pdf_pad = "resultaten_training.pdf"
+        pdf.save(pdf_pad)
+        pdf.close()
 
-    # 📄 Genereer PDF
-    pdf = fitz.open()
-    pagina = pdf.new_page()
-    tekst = "Resultaten voetbaltraining\n\n"
-    for i, row in resultaat_df.iterrows():
-        tekst += f"{row['Naam']}: Looptijd {row['Looptijd']}, Rondetijden {row['Rondetijden']}\n"
-    pagina.insert_text((50, 50), tekst, fontsize=11)
-    rect = fitz.Rect(50, 200, 550, 500)
-    pagina.insert_image(rect, filename=grafiek_pad)
-    pdf_pad = "resultaten_training.pdf"
-    pdf.save(pdf_pad)
-    pdf.close()
-
-    with open(pdf_pad, "rb") as f:
-        st.download_button("📄 Download resultaten als PDF", f, file_name=pdf_pad, mime="application/pdf")
+        with open(pdf_pad, "rb") as f:
+            st.download_button("📄 Download resultaten als PDF", f, file_name=pdf_pad, mime="application/pdf")
+    else:
+        st.info("PDF-export is niet beschikbaar omdat PyMuPDF niet geïnstalleerd is in deze omgeving.")
 
 # Toon resultaten als ze beschikbaar zijn
 if st.session_state.resultaat_df is not None:
