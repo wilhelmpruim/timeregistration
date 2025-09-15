@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import datetime
 
-st.title("🏃 Tijdregistratie voetbaltraining - Versie 7")
+st.title("🏃 Tijdregistratie voetbaltraining - Versie 8")
 
 # Invoer deelnemers
 namen_input = st.text_area("Voer namen in (één per regel):", """Kind 1
@@ -79,7 +79,7 @@ if st.button("🏁 Training afsluiten en resultaten tonen"):
 
     # Bereken looptijd
     df['Looptijd_td'] = df.apply(lambda row: row['Eindtijd_dt'] - row['Starttijd_dt'] if row['Starttijd_dt'] and row['Eindtijd_dt'] else None, axis=1)
-    df['Looptijd'] = df['Looptijd_td'].apply(lambda x: str(x) if pd.notna(x) else "")
+    df['Looptijd'] = df['Looptijd_td'].apply(lambda x: str(x).replace("0 days ", "") if pd.notna(x) else "")
 
     # Bereken rondetijden
     def bereken_rondes(row):
@@ -91,7 +91,7 @@ if st.button("🏁 Training afsluiten en resultaten tonen"):
         for i in range(1, len(tijden)):
             if tijden[i] and tijden[i-1]:
                 verschil = tijden[i] - tijden[i-1]
-                rondes.append(str(verschil))
+                rondes.append(str(verschil).replace("0 days ", ""))
             else:
                 rondes.append("n.v.t.")
         return ", ".join(rondes)
@@ -103,10 +103,9 @@ if st.button("🏁 Training afsluiten en resultaten tonen"):
         lambda r: ", ".join([t for t in r if pd.notna(t)]), axis=1
     )
 
-    # Maak resultaat dataframe
-    resultaat_df = df[['Naam', 'Starttijd', 'Eindtijd', 'Tussentijden', 'Rondetijden', 'Looptijd', 'Looptijd_td']].copy()
+    # Maak resultaat dataframe met aangepaste kolomvolgorde
+    resultaat_df = df[['Naam', 'Looptijd', 'Rondetijden', 'Starttijd', 'Eindtijd', 'Tussentijden']].copy()
     resultaat_df = resultaat_df.sort_values(by='Looptijd_td').reset_index(drop=True)
-    resultaat_df.drop(columns=['Looptijd_td'], inplace=True)
 
     st.session_state.resultaat_df = resultaat_df
 
