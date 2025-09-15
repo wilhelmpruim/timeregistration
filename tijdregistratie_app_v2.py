@@ -74,26 +74,26 @@ if st.button("🏁 Training afsluiten en resultaten tonen"):
 
     df['Starttijd_dt'] = df['Starttijd'].apply(parse_time)
     df['Eindtijd_dt'] = df['Eindtijd'].apply(parse_time)
-    df['Looptijd'] = df.apply(lambda row: row['Eindtijd_dt'] - row['Starttijd_dt'] if row['Starttijd_dt'] and row['Eindtijd_dt'] else None, axis=1)
-    df['Looptijd_str'] = df['Looptijd'].apply(lambda x: str(x) if pd.notna(x) else "")
+    df['Looptijd_td'] = df.apply(lambda row: row['Eindtijd_dt'] - row['Starttijd_dt'] if row['Starttijd_dt'] and row['Eindtijd_dt'] else None, axis=1)
+    df['Looptijd'] = df['Looptijd_td'].apply(lambda x: str(x) if pd.notna(x) else "")
 
     # Voeg tussentijden toe als string
     df['Tussentijden'] = df[[kol for kol in kolommen if kol.startswith('Tussentijd')]].apply(
         lambda r: ", ".join([t for t in r if pd.notna(t)]), axis=1
     )
 
-    # Maak resultaat dataframe
-    resultaat_df = df[['Naam', 'Starttijd', 'Eindtijd', 'Tussentijden', 'Looptijd_str', 'Looptijd']].copy()
-    resultaat_df = resultaat_df.sort_values(by='Looptijd').reset_index(drop=True)
-    resultaat_df.rename(columns={'Looptijd_str': 'Looptijd'}, inplace=True)
+    # Maak resultaat dataframe zonder dubbele kolomnamen
+    resultaat_df = df[['Naam', 'Starttijd', 'Eindtijd', 'Tussentijden', 'Looptijd', 'Looptijd_td']].copy()
+    resultaat_df = resultaat_df.sort_values(by='Looptijd_td').reset_index(drop=True)
+    resultaat_df.drop(columns=['Looptijd_td'], inplace=True)
 
     st.session_state.resultaat_df = resultaat_df
 
 # Toon resultaten als ze beschikbaar zijn
 if st.session_state.resultaat_df is not None:
     st.subheader("🏆 Resultaten op volgorde van looptijd")
-    st.dataframe(st.session_state.resultaat_df[['Naam', 'Starttijd', 'Eindtijd', 'Tussentijden', 'Looptijd']])
+    st.dataframe(st.session_state.resultaat_df)
 
     # Downloadknop
-    csv = st.session_state.resultaat_df[['Naam', 'Starttijd', 'Eindtijd', 'Tussentijden', 'Looptijd']].to_csv(index=False).encode('utf-8')
+    csv = st.session_state.resultaat_df.to_csv(index=False).encode('utf-8')
     st.download_button("📥 Download resultaten als CSV", data=csv, file_name="resultaten_training.csv", mime="text/csv")
