@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import datetime
 
-st.title("🏃 Tijdregistratie voetbaltraining - Versie 6")
+st.title("🏃 Tijdregistratie voetbaltraining - Versie 7")
 
 # Invoer deelnemers
 namen_input = st.text_area("Voer namen in (één per regel):", """Kind 1
@@ -14,7 +14,7 @@ Kind 6""")
 namen = [naam.strip() for naam in namen_input.split("\n") if naam.strip()]
 
 # Invoer aantal ronden
-aantal_ronden = st.number_input("Aantal ronden", min_value=1, max_value=10, value=1, step=1)
+aantal_ronden = st.number_input("Aantal ronden", min_value=1, max_value=10, value=2, step=1)
 
 # Kolomnamen op basis van aantal ronden
 kolommen = ['Naam', 'Starttijd']
@@ -72,18 +72,39 @@ if st.button("🏁 Training afsluiten en resultaten tonen"):
         except:
             return None
 
-    df['Starttijd_dt'] = df['Starttijd'].apply(parse_time)
-    df['Eindtijd_dt'] = df['Eindtijd'].apply(parse_time)
+    # Parse alle tijdstippen
+    tijd_kolommen = [kol for kol in kolommen if kol != 'Naam']
+    for kol in tijd_kolommen:
+        df[kol + '_dt'] = df[kol].apply(parse_time)
+
+    # Bereken looptijd
     df['Looptijd_td'] = df.apply(lambda row: row['Eindtijd_dt'] - row['Starttijd_dt'] if row['Starttijd_dt'] and row['Eindtijd_dt'] else None, axis=1)
     df['Looptijd'] = df['Looptijd_td'].apply(lambda x: str(x) if pd.notna(x) else "")
 
-    # Voeg tussentijden toe als string
+    # Bereken rondetijden
+    def bereken_rondes(row):
+        tijden = [row['Starttijd_dt']]
+        for i in range(1, aantal_ronden):
+            tijden.append(row.get(f'Tussentijd {i}_dt'))
+        tijden.append(row['Eindtijd_dt'])
+        rondes = []
+        for i in range(1, len(tijden)):
+            if tijden[i] and tijden[i-1]:
+                verschil = tijden[i] - tijden[i-1]
+                rondes.append(str(verschil))
+            else:
+                rondes.append("n.v.t.")
+        return ", ".join(rondes)
+
+    df['Rondetijden'] = df.apply(bereken_rondes, axis=1)
+
+    # Voeg tussentijden als tekst toe
     df['Tussentijden'] = df[[kol for kol in kolommen if kol.startswith('Tussentijd')]].apply(
         lambda r: ", ".join([t for t in r if pd.notna(t)]), axis=1
     )
 
-    # Maak resultaat dataframe zonder dubbele kolomnamen
-    resultaat_df = df[['Naam', 'Starttijd', 'Eindtijd', 'Tussentijden', 'Looptijd', 'Looptijd_td']].copy()
+    # Maak resultaat dataframe
+    resultaat_df = df[['Naam', 'Starttijd', 'Eindtijd', 'Tussentijden', 'Rondetijden', 'Looptijd', 'Looptijd_td']].copy()
     resultaat_df = resultaat_df.sort_values(by='Looptijd_td').reset_index(drop=True)
     resultaat_df.drop(columns=['Looptijd_td'], inplace=True)
 
