@@ -1,9 +1,9 @@
 import streamlit as st
 import pandas as pd
 import datetime
-import plotly.graph_objects as go
+import altair as alt
 
-st.title("🏃 Tijdregistratie voetbaltraining - Versie 10")
+st.title("🏃 Tijdregistratie voetbaltraining - Versie 10.1")
 
 # Invoer deelnemers
 namen_input = st.text_area("Voer namen in (één per regel):", """Kind 1
@@ -115,23 +115,32 @@ if st.session_state.resultaat_df is not None:
     csv = st.session_state.resultaat_df.to_csv(index=False).encode('utf-8')
     st.download_button("📥 Download resultaten als CSV", data=csv, file_name="resultaten_training.csv", mime="text/csv")
 
-    # 📈 Lijngrafiek onder de resultaten
+    # 📈 Altair-grafiek onder de resultaten
     st.subheader("📈 Voortgang per deelnemer")
-    fig = go.Figure()
+
+    records = []
     for _, row in df.iterrows():
         tijden = [row['Starttijd_dt']]
         for i in range(1, aantal_ronden):
             tijden.append(row.get(f'Tussentijd {i}_dt'))
         tijden.append(row['Eindtijd_dt'])
-        tijden = [t for t in tijden if t is not None]
-        x = tijden
-        y = list(range(1, len(tijden)+1))
-        fig.add_trace(go.Scatter(x=x, y=y, mode='lines+markers', name=row['Naam']))
+        for i, tijd in enumerate(tijden):
+            if tijd:
+                records.append({
+                    'Naam': row['Naam'],
+                    'Ronde': f'Ronde {i+1}',
+                    'Tijdstip': tijd
+                })
 
-    fig.update_layout(
-        xaxis_title='Tijdstip',
-        yaxis_title='Ronde',
+    df_lijn = pd.DataFrame(records)
+
+    chart = alt.Chart(df_lijn).mark_line(point=True).encode(
+        x='Tijdstip:T',
+        y='Ronde:O',
+        color='Naam:N'
+    ).properties(
         title='Voortgang per deelnemer',
-        height=500
+        height=400
     )
-    st.plotly_chart(fig, use_container_width=True)
+
+    st.altair_chart(chart, use_container_width=True)
