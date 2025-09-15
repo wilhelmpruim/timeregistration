@@ -3,9 +3,16 @@ import pandas as pd
 import datetime
 st.title("🏃 Tijdregistratie training")
 
-# Invoer deelnemers
-aantal_deelnemers = st.number_input("Aantal deelnemers", min_value=1, max_value=20, value=6, step=1)
-namen = [f"Deelnemer {i+1}" for i in range(aantal_deelnemers)]
+# Keuze: handmatige invoer of automatisch gegenereerde namen
+invoer_type = st.radio("Hoe wil je de namen invoeren?", ["Automatisch (Deelnemer 1, 2, ...)", "Handmatig invoeren"])
+
+if invoer_type == "Automatisch (Deelnemer 1, 2, ...)":
+    aantal_deelnemers = st.number_input("Aantal deelnemers", min_value=1, max_value=20, value=6, step=1)
+    namen = [f"Deelnemer {i+1}" for i in range(aantal_deelnemers)]
+else:
+    namen_input = st.text_area("Voer namen in (één per regel):", "Deelnemer 1\nDeelnemer 2\nDeelnemer 3")
+    namen = [naam.strip() for naam in namen_input.split("\n") if naam.strip()]
+    aantal_deelnemers = len(namen)
 
 # Invoer aantal ronden
 aantal_ronden = st.number_input("Aantal ronden", min_value=1, max_value=10, value=2, step=1)
@@ -38,7 +45,6 @@ def registreer_tijd(naam):
         if pd.isna(st.session_state.tijden_df.at[rij, kol]):
             st.session_state.tijden_df.at[rij, kol] = nu
             break
-
 # Knoppen in 2 kolommen
 st.subheader("👤 Deelnemers")
 kol1, kol2 = st.columns(2)
