@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import datetime
 
-st.title("🏃 Tijdregistratie voetbaltraining - Versie 8")
+st.title("🏃 Tijdregistratie voetbaltraining - Versie 8.1")
 
 # Invoer deelnemers
 namen_input = st.text_area("Voer namen in (één per regel):", """Kind 1
@@ -103,9 +103,10 @@ if st.button("🏁 Training afsluiten en resultaten tonen"):
         lambda r: ", ".join([t for t in r if pd.notna(t)]), axis=1
     )
 
-    # Maak resultaat dataframe met aangepaste kolomvolgorde
-    resultaat_df = df[['Naam', 'Looptijd', 'Rondetijden', 'Starttijd', 'Eindtijd', 'Tussentijden']].copy()
+    # Maak resultaat dataframe met juiste kolomvolgorde
+    resultaat_df = df[['Naam', 'Looptijd', 'Rondetijden', 'Starttijd', 'Eindtijd', 'Tussentijden', 'Looptijd_td']].copy()
     resultaat_df = resultaat_df.sort_values(by='Looptijd_td').reset_index(drop=True)
+    resultaat_df.drop(columns=['Looptijd_td'], inplace=True)
 
     st.session_state.resultaat_df = resultaat_df
 
