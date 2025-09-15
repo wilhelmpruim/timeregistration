@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 import datetime
-st.title("🏃 Tijdregistratie voetbaltraining - Versie 3 (met afsluitknop)")
+
+st.title("🏃 Tijdregistratie voetbaltraining - Versie 3 (hersteld + afsluitknop)")
 
 # Invoer deelnemers
 namen_input = st.text_area("Voer namen in (één per regel):", """Kind 1
@@ -43,3 +44,51 @@ def registreer_tijd(naam):
         if pd.isna(st.session_state.tijden_df.at[rij, kol]):
             st.session_state.tijden_df.at[rij, kol] = nu
             break
+
+# Knoppen in 2 kolommen
+st.subheader("👤 Deelnemers")
+kol1, kol2 = st.columns(2)
+for i, naam in enumerate(namen):
+    if i % 2 == 0:
+        with kol1:
+            if st.button(f"Registreer voor {naam}"):
+                registreer_tijd(naam)
+    else:
+        with kol2:
+            if st.button(f"Registreer voor {naam}"):
+                registreer_tijd(naam)
+
+# Tabel met tijden
+st.subheader("📋 Geregistreerde tijden")
+st.dataframe(st.session_state.tijden_df)
+
+# Afsluitknop
+if st.button("🏁 Training afsluiten en resultaten tonen"):
+    df = st.session_state.tijden_df.copy()
+    def parse_time(t):
+        return datetime.datetime.strptime(t, "%H:%M:%S") if pd.notna(t) else None
+
+    df['Starttijd_dt'] = df['Starttijd'].apply(parse_time)
+    df['Eindtijd_dt'] = df['Eindtijd'].apply(parse_time)
+    df['Looptijd'] = df.apply(lambda row: row['Eindtijd_dt'] - row['Starttijd_dt'] if row['Starttijd_dt'] and row['Eindtijd_dt'] else None, axis=1)
+    df['Looptijd_str'] = df['Looptijd'].apply(lambda x: str(x) if pd.notna(x) else "")
+
+    # Voeg tussentijden toe als string
+    df['Tussentijden'] = df[[kol for kol in kolommen if kol.startswith('Tussentijd')]].apply(
+        lambda r: ", ".join([t for t in r if pd.notna(t)]), axis=1
+    )
+
+    resultaat_df = df[['Naam', 'Starttijd', 'Eindtijd', 'Tussentijden', 'Looptijd_str']].copy()
+    resultaat_df = resultaat_df.sort_values(by='Looptijd').reset_index(drop=True)
+    resultaat_df.rename(columns={'Looptijd_str': 'Looptijd'}, inplace=True)
+
+    st.session_state.resultaat_df = resultaat_df
+
+# Toon resultaten als ze beschikbaar zijn
+if st.session_state.resultaat_df is not None:
+    st.subheader("🏆 Resultaten op volgorde van looptijd")
+    st.dataframe(st.session_state.resultaat_df)
+
+    # Downloadknop
+    csv = st.session_state.resultaat_df.to_csv(index=False).encode('utf-8')
+    st.download_button("📥 Download resultaten als CSV", data=csv, file_name="resultaten_training.csv", mime="text/csv")
