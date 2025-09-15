@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import datetime
-st.title("🏃 Tijdregistratie voetbaltraining - Versie 10 (zonder grafiek)")
+st.title("🏃 Tijdregistratie training")
 
 # Invoer deelnemers
 aantal_deelnemers = st.number_input("Aantal deelnemers", min_value=1, max_value=20, value=6, step=1)
