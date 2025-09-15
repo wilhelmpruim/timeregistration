@@ -6,9 +6,9 @@ import datetime
 st.title("🏃 Tijdregistratie voetbaltraining")
 
 # Flexibele invoer van deelnemers
-namen_input = st.text_area("Voer namen in (één per regel):", "Kind 1
+namen_input = st.text_area("Voer namen in (één per regel):", """Kind 1
 Kind 2
-Kind 3")
+Kind 3""")
 namen = [naam.strip() for naam in namen_input.split("
 ") if naam.strip()]
 
