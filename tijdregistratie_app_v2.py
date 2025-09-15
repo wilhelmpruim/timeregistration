@@ -1,15 +1,9 @@
 import streamlit as st
 import pandas as pd
 import datetime
-import os
+import plotly.graph_objects as go
 
-try:
-    import fitz  # PyMuPDF
-    pymupdf_available = True
-except ImportError:
-    pymupdf_available = False
-
-st.title("🏃 Tijdregistratie voetbaltraining - Versie 9.1")
+st.title("🏃 Tijdregistratie voetbaltraining - Versie 10")
 
 # Invoer deelnemers
 namen_input = st.text_area("Voer namen in (één per regel):", """Kind 1
@@ -112,36 +106,32 @@ if st.button("🏁 Training afsluiten en resultaten tonen"):
 
     st.session_state.resultaat_df = resultaat_df
 
-    # 📈 Lijngrafiek via Streamlit
-    def tijd_naar_seconden(t):
-        try:
-            h, m, s = map(int, t.split(":"))
-            return h * 3600 + m * 60 + s
-        except:
-            return 0
-
-    resultaat_df['Looptijd_sec'] = resultaat_df['Looptijd'].apply(tijd_naar_seconden)
-    st.subheader("📈 Looptijden per deelnemer")
-    st.line_chart(resultaat_df.set_index('Naam')['Looptijd_sec'])
-
-    # 📄 PDF-export (alleen als PyMuPDF beschikbaar is)
-    if pymupdf_available:
-        pdf = fitz.open()
-        pagina = pdf.new_page()
-        tekst = "Resultaten voetbaltraining\n\n"
-        for i, row in resultaat_df.iterrows():
-            tekst += f"{row['Naam']}: Looptijd {row['Looptijd']}, Rondetijden {row['Rondetijden']}\n"
-        pagina.insert_text((50, 50), tekst, fontsize=11)
-        pdf_pad = "resultaten_training.pdf"
-        pdf.save(pdf_pad)
-        pdf.close()
-
-        with open(pdf_pad, "rb") as f:
-            st.download_button("📄 Download resultaten als PDF", f, file_name=pdf_pad, mime="application/pdf")
-    else:
-        st.info("PDF-export is niet beschikbaar omdat PyMuPDF niet geïnstalleerd is in deze omgeving.")
-
 # Toon resultaten als ze beschikbaar zijn
 if st.session_state.resultaat_df is not None:
     st.subheader("🏆 Resultaten op volgorde van looptijd")
-    st.dataframe(st.session_state.resultaat_df.drop(columns=['Looptijd_sec'], errors='ignore'))
+    st.dataframe(st.session_state.resultaat_df)
+
+    # 📥 CSV export
+    csv = st.session_state.resultaat_df.to_csv(index=False).encode('utf-8')
+    st.download_button("📥 Download resultaten als CSV", data=csv, file_name="resultaten_training.csv", mime="text/csv")
+
+    # 📈 Lijngrafiek onder de resultaten
+    st.subheader("📈 Voortgang per deelnemer")
+    fig = go.Figure()
+    for _, row in df.iterrows():
+        tijden = [row['Starttijd_dt']]
+        for i in range(1, aantal_ronden):
+            tijden.append(row.get(f'Tussentijd {i}_dt'))
+        tijden.append(row['Eindtijd_dt'])
+        tijden = [t for t in tijden if t is not None]
+        x = tijden
+        y = list(range(1, len(tijden)+1))
+        fig.add_trace(go.Scatter(x=x, y=y, mode='lines+markers', name=row['Naam']))
+
+    fig.update_layout(
+        xaxis_title='Tijdstip',
+        yaxis_title='Ronde',
+        title='Voortgang per deelnemer',
+        height=500
+    )
+    st.plotly_chart(fig, use_container_width=True)
