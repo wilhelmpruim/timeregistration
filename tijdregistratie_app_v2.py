@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import datetime
@@ -7,7 +8,10 @@ st.title("🏃 Tijdregistratie voetbaltraining - Versie 2")
 # Flexibele invoer van deelnemers
 namen_input = st.text_area("Voer namen in (één per regel):", """Kind 1
 Kind 2
-Kind 3""")
+Kind 3
+Kind 4
+Kind 5
+Kind 6""")
 namen = [naam.strip() for naam in namen_input.split("\n") if naam.strip()]
 
 # Initialiseer session state
@@ -21,7 +25,7 @@ if 'tijden_df' not in st.session_state or st.session_state.get('namen') != namen
     st.session_state.namen = namen
 
 # Centrale startknop
-if st.button("Start training voor iedereen"):
+if st.button("🚦 Start training voor iedereen"):
     nu = datetime.datetime.now().strftime("%H:%M:%S")
     for i in range(len(st.session_state.tijden_df)):
         st.session_state.tijden_df.at[i, 'Starttijd'] = nu
@@ -35,11 +39,18 @@ def registreer_tijd(naam):
     elif pd.isna(st.session_state.tijden_df.at[rij, 'Eindtijd']):
         st.session_state.tijden_df.at[rij, 'Eindtijd'] = nu
 
-# Toon knoppen per deelnemer voor tussentijd/eindtijd
+# Toon knoppen per deelnemer in 2 kolommen
 st.subheader("👤 Deelnemers")
-for naam in namen:
-    if st.button(f"Registreer voor {naam}"):
-        registreer_tijd(naam)
+kol1, kol2 = st.columns(2)
+for i, naam in enumerate(namen):
+    if i % 2 == 0:
+        with kol1:
+            if st.button(f"Registreer voor {naam}"):
+                registreer_tijd(naam)
+    else:
+        with kol2:
+            if st.button(f"Registreer voor {naam}"):
+                registreer_tijd(naam)
 
 # Toon tabel met tijden
 st.subheader("📋 Geregistreerde tijden")
