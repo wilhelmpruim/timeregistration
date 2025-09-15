@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import datetime
 
-st.title("🏃 Tijdregistratie voetbaltraining - Versie 3")
+st.title("🏃 Tijdregistratie voetbaltraining - Versie 5")
 
 # Invoer deelnemers
 namen_input = st.text_area("Voer namen in (één per regel):", """Kind 1
@@ -21,6 +21,7 @@ kolommen = ['Naam', 'Starttijd']
 for i in range(1, aantal_ronden):
     kolommen.append(f'Tussentijd {i}')
 kolommen.append('Eindtijd')
+kolommen.append('Laatste registratie')
 
 # Initialiseer session state
 if 'tijden_df' not in st.session_state or st.session_state.get('namen') != namen or st.session_state.get('ronden') != aantal_ronden:
@@ -34,15 +35,20 @@ if 'tijden_df' not in st.session_state or st.session_state.get('namen') != namen
 if st.button("🚦 Start training voor iedereen"):
     nu = datetime.datetime.now().strftime("%H:%M:%S")
     st.session_state.tijden_df['Starttijd'] = [nu]*len(namen)
+    st.session_state.tijden_df['Laatste registratie'] = [nu]*len(namen)
 
 # Functie om tijd te registreren
 def registreer_tijd(naam):
     nu = datetime.datetime.now().strftime("%H:%M:%S")
     rij = st.session_state.tijden_df[st.session_state.tijden_df['Naam'] == naam].index[0]
-    for kol in kolommen[1:]:  # sla 'Naam' over
+    for kol in kolommen[1:-2]:  # sla 'Naam', 'Laatste registratie' en 'Eindtijd' over
         if pd.isna(st.session_state.tijden_df.at[rij, kol]):
             st.session_state.tijden_df.at[rij, kol] = nu
-            break
+            st.session_state.tijden_df.at[rij, 'Laatste registratie'] = nu
+            return
+    if pd.isna(st.session_state.tijden_df.at[rij, 'Eindtijd']):
+        st.session_state.tijden_df.at[rij, 'Eindtijd'] = nu
+        st.session_state.tijden_df.at[rij, 'Laatste registratie'] = nu
 
 # Knoppen in 2 kolommen
 st.subheader("👤 Deelnemers")
@@ -63,4 +69,4 @@ st.dataframe(st.session_state.tijden_df)
 
 # Download als CSV
 csv = st.session_state.tijden_df.to_csv(index=False).encode('utf-8')
-st.download_button("📥 Download als CSV", data=csv, file_name="tijdregistratie_training_v3.csv", mime="text/csv")
+st.download_button("📥 Download als CSV", data=csv, file_name="tijdregistratie_training_v5.csv", mime="text/csv")
