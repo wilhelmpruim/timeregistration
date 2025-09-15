@@ -45,11 +45,11 @@ kol1, kol2 = st.columns(2)
 for i, naam in enumerate(namen):
     if i % 2 == 0:
         with kol1:
-            if st.button(f"Registreer voor {naam}"):
+            if st.button(f"{naam}"):
                 registreer_tijd(naam)
     else:
         with kol2:
-            if st.button(f"Registreer voor {naam}"):
+            if st.button(f"{naam}"):
                 registreer_tijd(naam)
 
 # Tabel met tijden
