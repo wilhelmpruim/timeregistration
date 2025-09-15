@@ -134,14 +134,18 @@ if st.session_state.resultaat_df is not None:
 
     df_lijn = pd.DataFrame(records)
 
+
 chart = alt.Chart(df_lijn).mark_line(point=True).encode(
-    y='Tijdstip:T',
+    y='Duur (minuten):Q',
     x='Ronde:O',
     color='Naam:N'
 ).properties(
-    title='Voortgang per deelnemer (tijd verticaal)',
+    title='Voortgang per deelnemer (duur verticaal)',
     height=400
 )
+
+st.altair_chart(chart, use_container_width=True)
+
 
 st.altair_chart(chart, use_container_width=True)
 
