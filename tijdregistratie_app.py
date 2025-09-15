@@ -9,8 +9,7 @@ st.title("🏃 Tijdregistratie voetbaltraining")
 namen_input = st.text_area("Voer namen in (één per regel):", """Kind 1
 Kind 2
 Kind 3""")
-namen = [naam.strip() for naam in namen_input.split("
-") if naam.strip()]
+namen = [naam.strip() for naam in namen_input.split("\n") if naam.strip()]
 
 # Initialiseer session state
 if 'tijden_df' not in st.session_state or st.session_state.get('namen') != namen:
