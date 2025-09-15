@@ -1,18 +1,11 @@
 import streamlit as st
 import pandas as pd
 import datetime
-import altair as alt
-
-st.title("🏃 Tijdregistratie voetbaltraining - Versie 10.1")
+st.title("🏃 Tijdregistratie voetbaltraining - Versie 10 (zonder grafiek)")
 
 # Invoer deelnemers
-namen_input = st.text_area("Voer namen in (één per regel):", """Kind 1
-Kind 2
-Kind 3
-Kind 4
-Kind 5
-Kind 6""")
-namen = [naam.strip() for naam in namen_input.split("\n") if naam.strip()]
+aantal_deelnemers = st.number_input("Aantal deelnemers", min_value=1, max_value=20, value=6, step=1)
+namen = [f"Deelnemer {i+1}" for i in range(aantal_deelnemers)]
 
 # Invoer aantal ronden
 aantal_ronden = st.number_input("Aantal ronden", min_value=1, max_value=10, value=2, step=1)
@@ -72,7 +65,6 @@ if st.button("🏁 Training afsluiten en resultaten tonen"):
             return datetime.datetime.strptime(t, "%H:%M:%S") if pd.notna(t) else None
         except:
             return None
-
     tijd_kolommen = [kol for kol in kolommen if kol != 'Naam']
     for kol in tijd_kolommen:
         df[kol + '_dt'] = df[kol].apply(parse_time)
@@ -114,36 +106,3 @@ if st.session_state.resultaat_df is not None:
     # 📥 CSV export
     csv = st.session_state.resultaat_df.to_csv(index=False).encode('utf-8')
     st.download_button("📥 Download resultaten als CSV", data=csv, file_name="resultaten_training.csv", mime="text/csv")
-
-    # 📈 Altair-grafiek onder de resultaten
-    st.subheader("📈 Voortgang per deelnemer")
-
-    records = []
-    for _, row in df.iterrows():
-        tijden = [row['Starttijd_dt']]
-        for i in range(1, aantal_ronden):
-            tijden.append(row.get(f'Tussentijd {i}_dt'))
-        tijden.append(row['Eindtijd_dt'])
-        for i, tijd in enumerate(tijden):
-            if tijd:
-                records.append({
-                    'Naam': row['Naam'],
-                    'Ronde': f'Ronde {i+1}',
-                    'Tijdstip': tijd
-                })
-
-    df_lijn = pd.DataFrame(records)
-
-
-chart = alt.Chart(df_lijn).mark_line(point=True).encode(
-    y='Duur (minuten):Q',
-    x='Ronde:O',
-    color='Naam:N'
-).properties(
-    title='Voortgang per deelnemer (duur verticaal)',
-    height=400
-)
-
-st.altair_chart(chart, use_container_width=True)
-
-
